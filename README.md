@@ -40,7 +40,7 @@ Try it out, default admin user is admin/admin.
       -p 3000:3000 \
       --name grafana-xxl \
       monitoringartist/grafana-xxl:dev
-      
+
 ## Building Grafana XXL for ARM
 
 You need ARM-version Grafana's deb (for example from [here](https://github.com/fg2it/grafana-on-raspberry/releases)).
@@ -57,6 +57,20 @@ Also you need ARM-version of gosu (from [here](https://github.com/tianon/gosu/re
       --tag grafana-xxl \
       --build-arg GRAFANA_DEB_URL=https://github.com/fg2it/grafana-on-raspberry/releases/download/v5.0.4/grafana_5.0.4_arm64.deb \
       --build-arg GOSU_BIN_URL=https://github.com/tianon/gosu/releases/download/1.10/gosu-arm64 .
+
+## Building Grafana XXL Enterprise version
+
+Building the enterprise version of Grafana with its premium plugins requires you to be logged into the site before the download location is given in the API (which is grafana.com/api, not grafana.net/api, confusingly). So, the grafana.com cookie must be passed into the build process.
+
+To begin, create a local environment variable with the grafana.com website cookie to keep the `docker build` command clean
+
+    export GRAFANA_COM_COOKIE="connect.sid=s%3AkT0eX...1j0HrHIE; consent=%7B%22analytics%22%3Atrue%7D; driftt_aid=5e4e-...-7525; DFTT_END_USER_PREV_BOOTSTRAPPED=true; config=%7B%22org%22%3A%22whateverenterprise%22%2C%22displayType%22%3A%22list%22%7D; io=bS-kE...68"
+
+Then, build the image with the `--build-arg` switch, including your cookie
+
+    docker build --build-arg GRAFANA_COM_COOKIE=${GRAFANA_COM_COOKIE} .
+
+This will iterate through all premium plugins listed in the `grafana.net/api/plugins` list and install them. *Note* there are still some premium plugins that do not provide a download url (like "grafana-timestream-datasource"), but they fail gracefully.
 
 ## Configuring your Grafana container
 
@@ -98,9 +112,9 @@ Supported variables:
 ## Auto upgrade plugins
 
 Container tries to upgrade all installed plugins in the container automatically before Grafana start. If you want to disable this behaviour, please use environment variable `-e UPGRADEALL=false`.
-      
+
 ## Supported monitoring services
- 
+
 - [Hawkular](http://www.hawkular.org/docs/components/metrics/grafana_integration.html)
 - [Raintank](http://raintank.io/docs/litmus/raintank-datasource/)
 

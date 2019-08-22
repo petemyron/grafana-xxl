@@ -2,8 +2,8 @@ FROM debian:stretch
 MAINTAINER Jan Garaj info@monitoringartist.com
 
 ARG GRAFANA_ARCHITECTURE=amd64
-ARG GRAFANA_VERSION=6.3.2
-ARG GRAFANA_DEB_URL=https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_${GRAFANA_VERSION}_${GRAFANA_ARCHITECTURE}.deb
+ARG GRAFANA_VERSION=6.3.3
+ARG GRAFANA_DEB_URL=https://dl.grafana.com/enterprise/release/grafana-enterprise_${GRAFANA_VERSION}_${GRAFANA_ARCHITECTURE}.deb
 ARG GOSU_BIN_URL=https://github.com/tianon/gosu/releases/download/1.10/gosu-${GRAFANA_ARCHITECTURE}
 
 ### GRAFANA_VERSION=latest = nightly build
@@ -41,6 +41,17 @@ RUN \
   apt-get autoremove -y --allow-downgrades --allow-remove-essential --allow-change-held-packages && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
+
+# premium plugins, must be logged in locally to build context, have valid website cookie
+ARG GRAFANA_COM_COOKIE
+
+RUN \
+  apt-get update && \
+  apt-get -y --force-yes --no-install-recommends install curl ca-certificates jq && \
+  for plugin in $(curl -s https://grafana.net/api/plugins?orderBy=name | jq '.items[] | select(.status=="premium") | .slug' | tr -d '"'); do \
+      downloadSlug=$(curl -s --cookie "$GRAFANA_COM_COOKIE" https://grafana.com/api/plugins/$plugin | jq '.downloadSlug'); \
+      grafana-cli --pluginsDir "${GF_PLUGIN_DIR}" plugins install $downloadSlug; \
+    done
 
 VOLUME ["/var/lib/grafana", "/var/log/grafana", "/etc/grafana"]
 
